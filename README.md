@@ -67,5 +67,18 @@ escape every `<` as `<`. Do not write page breaks for pagination — only
 `window.tiffin` exposes `{ doc, serialize(), serializeFile(), loadDoc(), save(),
 renderStatic() }`.
 
+Claude Code users get a packaged `tiffin-docs` skill: it bundles the runtime
+shell, ships templated documents, and splices the JSON without disturbing the
+compressed runtime below it.
+
+## Lineage
+
+Bento settled the argument that a document can carry its own application. Tiffin
+takes that thesis whole — one file, view-source honest, self-saving,
+agent-editable — and diverges on the one thing prose has that slides do not:
+pages are derived, never stored. [docs/INSPIRATION.md](docs/INSPIRATION.md) is
+the full accounting of what is borrowed and what prose forced a different answer
+to.
+
 MIT licensed. `reference/bento/` is a git checkout of Bento, kept for reference;
 Tiffin shares its ideas, not its code.
