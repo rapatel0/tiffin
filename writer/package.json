@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "build:single": "tsc -b && SINGLEFILE=1 vite build --outDir dist-single && mv dist-single/index.html dist-single/Tiffin_Writer.tiffin.html && node ../scripts/postbuild-compress.mjs dist-single/Tiffin_Writer.tiffin.html && node ../scripts/shell-gate.mjs dist-single/Tiffin_Writer.tiffin.html",
-    "gate": "node ../scripts/shell-gate.mjs dist-single/Tiffin_Writer.tiffin.html"
+    "gate": "node ../scripts/shell-gate.mjs dist-single/Tiffin_Writer.tiffin.html",
+    "test": "esbuild test/review.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/tf-test.mjs --log-level=error && node node_modules/.cache/tf-test.mjs"
   },
   "dependencies": {
     "prosemirror-commands": "^1.7.1",
@@ -26,6 +27,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.13.2",
+    "esbuild": "^0.25.0",
     "typescript": "~5.8.3",
     "vite": "^7.1.1",
     "vite-plugin-singlefile": "^2.3.3"

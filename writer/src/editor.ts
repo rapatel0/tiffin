@@ -23,7 +23,8 @@ import { gapCursor } from 'prosemirror-gapcursor'
 
 import { schema } from './schema.ts'
 import { paginationPlugin } from './paginate.ts'
-import { defaultPageSetup, pageBox, type PageSetup, type TiffinDoc } from './model.ts'
+import { bodyRev, defaultPageSetup, emptyReview, pageBox, type PageSetup, type Review, type TiffinDoc } from './model.ts'
+import { getReview, REVIEW_META, reviewPlugin, setReview } from './review.ts'
 
 const nodes = schema.nodes
 const marks = schema.marks
@@ -136,6 +137,8 @@ export interface WriterHost {
   /** Fires whenever the document content changes (not on decoration passes). */
   onChange(): void
   onPages(pages: number): void
+  /** Fires when comments or suggestions change, so the panel can redraw. */
+  onReview?(): void
 }
 
 /**
@@ -168,6 +171,7 @@ export class Writer {
         gapCursor(),
         columnResizing(),
         tableEditing(),
+        reviewPlugin(doc.review, body),
         paginationPlugin({
           setup: () => this.setupRef,
           onPages: (pages) => this.host.onPages(pages),
@@ -179,10 +183,42 @@ export class Writer {
       state,
       attributes: { class: 'tf-prose', spellcheck: 'true' },
       dispatchTransaction: (tr) => {
+        const before = getReview(this.view.state).review
         this.view.updateState(this.view.state.apply(tr))
+        const after = getReview(this.view.state).review
         if (tr.docChanged) this.host.onChange()
+        if (after !== before) {
+          // Annotations are document content: adding one dirties the file even
+          // when not a character of prose has changed.
+          if (!tr.docChanged) this.host.onChange()
+          this.host.onReview?.()
+        }
       },
     })
+  }
+
+  // ── review ────────────────────────────────────────────────────────────────
+
+  get review(): Review {
+    return getReview(this.view.state).review
+  }
+
+  get reviewState() {
+    return getReview(this.view.state)
+  }
+
+  /** Apply a patch to the review state and let the host redraw. */
+  patchReview(patch: Parameters<typeof setReview>[1]): void {
+    this.view.dispatch(setReview(this.view.state, patch))
+  }
+
+  setReviewData(review: Review): void {
+    this.patchReview({ review })
+  }
+
+  /** Hash of the prose as it stands — the merge precondition. */
+  currentRev(): string {
+    return bodyRev(this.view.state.doc.toJSON())
   }
 
   get pageSetup(): PageSetup {
@@ -243,13 +279,28 @@ export class Writer {
       `margin:${mm(s.margin.top)} ${mm(s.margin.right)} ${mm(s.margin.bottom)} ${mm(s.margin.left)}}`
   }
 
-  /** The full document, ready to write to disk. */
+  /**
+   * The full document, ready to write to disk.
+   *
+   * Review anchors come from plugin state rather than the envelope, because
+   * that is where they have been kept live: every transaction since load has
+   * mapped them through its own changes. The envelope's copy is stale by
+   * definition the moment anyone types.
+   */
   snapshot(): TiffinDoc {
+    const review = this.review
+    const empty =
+      !Object.keys(review.comments).length &&
+      !Object.keys(review.suggestions).length &&
+      !Object.keys(review.people).length
     return {
       ...this.envelope,
       pageSetup: this.setupRef,
       body: this.view.state.doc.toJSON(),
       modified: new Date().toISOString(),
+      // Absent until someone annotates — an untouched document should not grow
+      // an empty review block just for having opened in a build that has one.
+      ...(empty ? { review: undefined } : { review }),
     }
   }
 
@@ -261,6 +312,10 @@ export class Writer {
     const content = body ? PMNode.fromJSON(schema, body) : schema.topNodeType.createAndFill()!
     content.check()
     const tr = this.view.state.tr.replaceWith(0, this.view.state.doc.content.size, content.content)
+    // The incoming review describes the incoming body, so it replaces rather
+    // than merges — mapping the old anchors through a whole-document swap would
+    // produce positions into prose that no longer exists.
+    tr.setMeta(REVIEW_META, { review: next.review ?? emptyReview(bodyRev(body)), active: null })
     this.view.dispatch(tr)
     this.applyGeometry()
     document.title = `${this.envelope.title} — Tiffin`

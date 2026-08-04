@@ -126,6 +126,13 @@ html, body {
 
 /* ------------------------------------------------------------ page surface */
 
+/* The middle row: page scroller, and the review rail beside it when open. */
+.tf-main {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+}
+
 .tf-scroll {
   flex: 1 1 auto;
   overflow: auto;
@@ -331,9 +338,124 @@ html, body {
  * document prints on whatever paper the system defaults to. The real rule is
  * generated with literal millimetres by Writer.applyGeometry(). */
 
+/* ----------------------------------------------------------------- review */
+
+/* THE RAIL SITS OUTSIDE THE PAGE COLUMN, DELIBERATELY.
+ * Margin bubbles beside their anchor would be nicer and are a later sprint.
+ * Anything drawn inside the page margin risks perturbing a measured block
+ * height, and the paginator's whole no-oscillation argument rests on those
+ * heights being position-independent. A fixed rail cannot reach them. */
+.tf-rail {
+  flex: 0 0 300px;
+  min-height: 0;
+  display: none;
+  flex-direction: column;
+  background: #f7f8fa;
+  border-left: 1px solid #e3e5ea;
+  font: 13px/1.5 system-ui, sans-serif;
+}
+.tf-rail.is-open { display: flex; }
+
+.tf-rail-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e3e5ea;
+}
+.tf-rail-count {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 9px;
+  background: #dfe3e8;
+  font-size: 11px;
+  text-align: center;
+}
+.tf-rail-count:empty { display: none; }
+.tf-rail-actions { margin-left: auto; display: flex; gap: 4px; }
+.tf-rail-list { flex: 1 1 auto; overflow: auto; padding: 10px; display: grid; gap: 10px; align-content: start; }
+.tf-rail-empty { color: #6b7280; margin: 0; }
+
+.tf-card {
+  border: 1px solid #e3e5ea;
+  border-left: 3px solid var(--tf-annot, #999);
+  border-radius: 6px;
+  background: #fff;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.tf-card.is-active { box-shadow: 0 0 0 2px color-mix(in srgb, var(--tf-annot) 40%, transparent); }
+.tf-card-head { display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; }
+.tf-who { font-weight: 600; color: var(--tf-annot, #333); }
+.tf-when, .tf-kind { color: #6b7280; font-size: 11px; }
+.tf-kind { text-transform: uppercase; letter-spacing: .04em; }
+.tf-stale {
+  margin-left: auto;
+  font-size: 11px;
+  color: #92400e;
+  background: #fef3c7;
+  border-radius: 4px;
+  padding: 0 5px;
+}
+.tf-quote {
+  margin: 0 0 6px;
+  padding-left: 8px;
+  border-left: 2px solid #e3e5ea;
+  color: #4b5563;
+  font-size: 12px;
+}
+.tf-quote-ins { display: block; color: #166534; text-decoration: none; border-left-color: #86efac; }
+.tf-card-body { margin: 0; white-space: pre-wrap; }
+.tf-reply { margin-top: 6px; padding-left: 8px; border-left: 2px solid #eceef2; }
+.tf-card-foot { display: flex; gap: 10px; margin-top: 6px; }
+.tf-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  color: #2b6cb0;
+  cursor: pointer;
+}
+.tf-link:disabled { color: #9ca3af; cursor: default; }
+
+.tf-compose { border-top: 1px solid #e3e5ea; padding: 10px; display: grid; gap: 6px; }
+.tf-compose-input {
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+  padding: 6px 8px;
+  border: 1px solid #d7dae0;
+  border-radius: 5px;
+}
+.tf-compose-row { display: flex; gap: 6px; justify-content: flex-end; }
+
+/* In-prose annotation rendering. Both are inline decorations, so they add no
+ * box and cannot change a measured block height. */
+.tf-cmt {
+  background: color-mix(in srgb, var(--tf-annot) 18%, transparent);
+  border-bottom: 2px solid var(--tf-annot);
+}
+.tf-sug-del { text-decoration: line-through; text-decoration-color: var(--tf-annot); opacity: .65; }
+.tf-sug-ins {
+  color: var(--tf-annot);
+  background: color-mix(in srgb, var(--tf-annot) 12%, transparent);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+.tf-annot-active { outline: 2px solid color-mix(in srgb, var(--tf-annot) 55%, transparent); }
+.tf-annot-stale { border-bottom-style: dashed; }
+
 @media print {
   html, body { background: #fff; height: auto; }
-  .tf-bar, .tf-status, .tf-band { display: none !important; }
+  .tf-bar, .tf-status, .tf-band, .tf-rail { display: none !important; }
+  /* Review is screen-only in v1 — paper is always the clean document. Both the
+   * rail and every in-prose annotation are dropped, including the proposed-text
+   * widgets, so print output matches the accepted state of the prose. */
+  .tf-main { display: block; }
+  .tf-sug-ins { display: none !important; }
+  .tf-cmt { background: none; border-bottom: 0; }
+  .tf-sug-del { text-decoration: none; opacity: 1; }
   .tf-scroll { overflow: visible; padding: 0; }
   .tf-column { width: auto; margin: 0; }
   .tf-prose {
