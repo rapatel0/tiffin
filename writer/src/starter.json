@@ -1,0 +1,251 @@
+{
+  "format": "tiffin/doc",
+  "version": 1,
+  "docId": "",
+  "title": "Welcome to Tiffin",
+  "pageSetup": {
+    "paper": "A4",
+    "orientation": "portrait",
+    "margin": { "top": 96, "right": 96, "bottom": 96, "left": 96 },
+    "header": { "left": "", "center": "", "right": "Tiffin" },
+    "footer": { "left": "", "center": "{page} / {pages}", "right": "" },
+    "gap": 24
+  },
+  "modified": "2026-08-03T00:00:00.000Z",
+  "body": {
+    "type": "doc",
+    "content": [
+      {
+        "type": "heading",
+        "attrs": { "level": 1 },
+        "content": [{ "type": "text", "text": "The document that fits in a file" }]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          { "type": "text", "text": "This page is not a preview of a document. It " },
+          { "type": "text", "marks": [{ "type": "em" }], "text": "is" },
+          {
+            "type": "text",
+            "text": " the document, and the editor you are reading it in shipped inside the same file. Type anywhere. Watch the page count at the bottom change as text spills onto the next sheet. Then press "
+          },
+          { "type": "text", "marks": [{ "type": "code" }], "text": "Cmd-S" },
+          {
+            "type": "text",
+            "text": " and this file will rewrite itself on disk with your words in it — no account, no server, no installer."
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": { "level": 2 },
+        "content": [{ "type": "text", "text": "Pages are computed, not stored" }]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Open this file on another machine and the page breaks are worked out again from scratch. That is deliberate. A break position is only true for one particular set of font metrics, one zoom level, one browser — so writing it into the saved document would make the file lie about itself the moment it travelled. And travelling is the whole point."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          { "type": "text", "text": "So the JSON in this file stores your prose and " },
+          { "type": "text", "marks": [{ "type": "strong" }], "text": "only the breaks you asked for" },
+          {
+            "type": "text",
+            "text": ". Everything else is measured on open and drawn as decoration. You can verify all of this: use View Source and look near the top of the file."
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": { "level": 2 },
+        "content": [{ "type": "text", "text": "What you can do right now" }]
+      },
+      {
+        "type": "bullet_list",
+        "content": [
+          {
+            "type": "list_item",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "marks": [{ "type": "strong" }], "text": "Write." },
+                  {
+                    "type": "text",
+                    "text": " Markdown shortcuts work as you type: hash-space for a heading, dash-space for a bullet, greater-than-space for a quote, three backticks for code."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "list_item",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "marks": [{ "type": "strong" }], "text": "Force a page break." },
+                  { "type": "text", "text": " Cmd-Return, the same gesture Word uses. There is one on the next page." }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "list_item",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "marks": [{ "type": "strong" }], "text": "Change the paper." },
+                  { "type": "text", "text": " Pick A4, Letter, Legal or landscape in the toolbar and the document repaginates live." }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "list_item",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "marks": [{ "type": "strong" }], "text": "Print it." },
+                  {
+                    "type": "text",
+                    "text": " The print output uses the same break positions you see on screen, so a PDF is not a second opinion."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "list_item",
+            "content": [
+              {
+                "type": "paragraph",
+                "content": [
+                  { "type": "text", "marks": [{ "type": "strong" }], "text": "Hand it to an assistant." },
+                  {
+                    "type": "text",
+                    "text": " Copy JSON, let a model rewrite it, Paste JSON. Or point any agent with filesystem access straight at the file."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "blockquote",
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Office documents used to be things you had. The good ones still are."
+              }
+            ]
+          }
+        ]
+      },
+      { "type": "page_break" },
+      {
+        "type": "heading",
+        "attrs": { "level": 2 },
+        "content": [{ "type": "text", "text": "Honest about the gaps" }]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "This is the first sprint, and paged layout has a long tail. The table below is what is done and what is not — it is in the file rather than in a changelog because a tool that hides its limits wastes your afternoon."
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "content": [
+          {
+            "type": "table_row",
+            "content": [
+              { "type": "table_header", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Capability" }] }] },
+              { "type": "table_header", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "State" }] }] }
+            ]
+          },
+          {
+            "type": "table_row",
+            "content": [
+              { "type": "table_cell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Automatic pagination, forced breaks, live repaginate" }] }] },
+              { "type": "table_cell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Working" }] }] }
+            ]
+          },
+          {
+            "type": "table_row",
+            "content": [
+              { "type": "table_cell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Self-save in place, print matching screen" }] }] },
+              { "type": "table_cell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Working" }] }] }
+            ]
+          },
+          {
+            "type": "table_row",
+            "content": [
+              { "type": "table_cell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Tables splitting across a page boundary" }] }] },
+              { "type": "table_cell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Not yet — a long table overflows its page" }] }] }
+            ]
+          },
+          {
+            "type": "table_row",
+            "content": [
+              { "type": "table_cell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Footnotes, widow and orphan control" }] }] },
+              { "type": "table_cell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Not yet" }] }] }
+            ]
+          },
+          {
+            "type": "table_row",
+            "content": [
+              { "type": "table_cell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Printed running headers and footers" }] }] },
+              { "type": "table_cell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Screen only — browsers will not render them on paper" }] }] }
+            ]
+          },
+          {
+            "type": "table_row",
+            "content": [
+              { "type": "table_cell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Crash recovery, DOCX import and export, collaboration" }] }] },
+              { "type": "table_cell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Planned, in that order" }] }] }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": { "level": 2 },
+        "content": [{ "type": "text", "text": "How to keep a copy" }]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "In Chrome or Edge, Cmd-S writes straight back to the file you opened. In Firefox and Safari there is no File System Access API, so each save arrives as a download instead — the file is identical, you just have to put it somewhere yourself. Save as makes a copy in any browser."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Delete everything on this page and start writing. It is your document now."
+          }
+        ]
+      }
+    ]
+  }
+}

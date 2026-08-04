@@ -1,0 +1,13 @@
+# Build output. The shipped artifact is one file, but it is fully reproducible
+# with `npm run build:single` — releases are published, not committed.
+dist/
+dist-single/
+*.tsbuildinfo
+
+node_modules/
+
+# reference/bento is its own git checkout, kept locally for reference only.
+# Tiffin shares Bento's ideas, not its code.
+reference/
+
+.DS_Store

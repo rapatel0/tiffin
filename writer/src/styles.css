@@ -1,0 +1,363 @@
+/* SPDX-License-Identifier: MIT
+ *
+ * THE MEASUREMENT CONTRACT
+ * Blocks in .tf-prose get margin-bottom and NEVER margin-top. That single rule
+ * is why paginate.ts can add up heights arithmetically instead of reasoning
+ * about margin collapsing between siblings. If you add a margin-top here, you
+ * break the paginator — not visibly, but by a few pixels per page, which is
+ * worse. Owning this stylesheet is what makes the paginator 250 lines.
+ *
+ * Geometry comes from the custom properties Writer.applyGeometry() sets, so the
+ * screen, the bands and @page all read the same numbers.
+ */
+
+:root {
+  --tf-page-w: 794px;
+  --tf-page-h: 1123px;
+  --tf-margin-top: 96px;
+  --tf-margin-right: 96px;
+  --tf-margin-bottom: 96px;
+  --tf-margin-left: 96px;
+  --tf-gap: 24px;
+
+
+  /* light-dark() needs this declared, and it is also what gives form controls
+   * and scrollbars the right appearance in a dark OS theme. */
+  color-scheme: light dark;
+
+  --tf-ink: #16181d;
+  --tf-muted: #6b7280;
+  --tf-desk: #9aa0a6;
+  --tf-chrome: #f6f7f9;
+  --tf-line: #d7dae0;
+  --tf-accent: #2f6fdb;
+  --tf-serif: ui-serif, Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  --tf-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --tf-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --tf-desk: #2a2d33;
+    --tf-chrome: #1c1f24;
+    --tf-line: #3a3f47;
+    --tf-ink: #16181d; /* page ink stays dark: the page is paper, not UI */
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: var(--tf-sans);
+  color: var(--tf-ink);
+  background: var(--tf-desk);
+}
+
+#tf-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ---------------------------------------------------------------- top bar */
+
+.tf-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: var(--tf-chrome);
+  border-bottom: 1px solid var(--tf-line);
+  color: light-dark(#16181d, #e6e8ec);
+}
+
+.tf-title {
+  font: 600 15px/1.2 var(--tf-sans);
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 5px 8px;
+  min-width: 14ch;
+  max-width: 34ch;
+}
+.tf-title:hover { border-color: var(--tf-line); }
+.tf-title:focus { outline: none; border-color: var(--tf-accent); background: light-dark(#fff, #14171b); }
+
+.tf-spacer { flex: 1 1 auto; }
+
+.tf-group {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: light-dark(#fff, #14171b);
+  border: 1px solid var(--tf-line);
+  border-radius: 7px;
+}
+
+.tf-btn {
+  min-width: 28px;
+  height: 26px;
+  padding: 0 6px;
+  font: 500 13px/1 var(--tf-sans);
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.tf-btn:hover { background: light-dark(#eceef2, #262a31); }
+.tf-btn.is-active { background: var(--tf-accent); color: #fff; }
+.tf-btn-text { font-size: 12px; padding: 0 9px; }
+
+.tf-select {
+  height: 26px;
+  font: 500 12px/1 var(--tf-sans);
+  color: inherit;
+  background: light-dark(#fff, #14171b);
+  border: 1px solid var(--tf-line);
+  border-radius: 5px;
+  padding: 0 4px;
+}
+
+/* ------------------------------------------------------------ page surface */
+
+.tf-scroll {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 28px 0 64px;
+}
+
+.tf-column {
+  width: var(--tf-page-w);
+  margin: 0 auto;
+}
+
+/* The editor root IS the page stack: one continuous white card whose page
+ * boundaries are drawn by the band decorations. Padding is left/right only —
+ * top and bottom margins are produced by bands, so page one is not special. */
+.tf-prose {
+  width: var(--tf-page-w);
+  padding: 0 var(--tf-margin-right) 0 var(--tf-margin-left);
+  background: #fff;
+  color: var(--tf-ink);
+  font: 400 16px/1.62 var(--tf-serif);
+  outline: none;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.22), 0 8px 24px rgb(0 0 0 / 0.12);
+}
+
+/* THE MEASUREMENT CONTRACT — margin-bottom only. See the header comment.
+ *
+ * And NO POSITIONAL SELECTORS. A `:last-child { margin-bottom: 0 }` rule looks
+ * harmless and quietly breaks the paginator: inserting a band changes which
+ * element is last, so a block's height would depend on where the bands are —
+ * the one thing the measurement pass assumes can never happen.
+ *
+ * Bands are page furniture, not prose, so they take no block margin at all.
+ * Without this they are matched by the rule above and every page comes out
+ * ~10px too tall. */
+/* And NO MARGIN MAY ESCAPE A BLOCK. Everything nested is zeroed, so a paragraph
+ * inside a blockquote or a table cell cannot collapse its margin out through
+ * the container's edge and add height that no child rect accounts for. That
+ * leak is invisible and it is cumulative: it cost ~12px per blockquote here,
+ * which is how a long document silently paginates a line early.
+ *
+ * Spacing inside containers is therefore expressed with ADJACENT-SIBLING rules
+ * only (`p + p`). A sibling margin sits between two boxes and can never
+ * collapse through the parent's boundary, so it is always accounted for. */
+.tf-prose :where(p, h1, h2, h3, h4, h5, h6, ul, ol, li, blockquote, pre, table, hr, figure) { margin: 0; }
+/* Bands are excluded with :not() rather than overridden with `margin: 0
+ * !important` — an !important declaration outranks an inline style, so it also
+ * killed the negative left/right margins the bands set inline to pull
+ * themselves out to full page width, and every band sat 96px to the right of
+ * its page. */
+.tf-prose > *:not(.tf-band) { margin: 0 0 0.62em; }
+.tf-prose li + li { margin-top: 0.2em; }
+.tf-prose li > ul, .tf-prose li > ol { margin-top: 0.2em; }
+.tf-prose blockquote > p + p,
+.tf-prose td > p + p,
+.tf-prose th > p + p,
+.tf-prose li > p + p { margin-top: 0.5em; }
+
+.tf-prose h1 { font: 700 2em/1.2 var(--tf-serif); margin-bottom: 0.5em; }
+.tf-prose h2 { font: 700 1.5em/1.25 var(--tf-serif); margin-bottom: 0.45em; }
+.tf-prose h3 { font: 600 1.22em/1.3 var(--tf-serif); margin-bottom: 0.4em; }
+.tf-prose h4 { font: 600 1.05em/1.35 var(--tf-serif); margin-bottom: 0.4em; }
+.tf-prose blockquote {
+  padding-left: 1em;
+  border-left: 3px solid var(--tf-line);
+  color: #3d4149;
+  font-style: italic;
+}
+.tf-prose pre {
+  font: 13px/1.5 var(--tf-mono);
+  background: #f3f4f6;
+  padding: 0.7em 0.9em;
+  border-radius: 5px;
+  white-space: pre-wrap;
+}
+.tf-prose code { font: 0.9em var(--tf-mono); background: #f3f4f6; padding: 0.1em 0.3em; border-radius: 3px; }
+.tf-prose pre code { background: none; padding: 0; }
+.tf-prose ul, .tf-prose ol { padding-left: 1.6em; }
+
+
+/* An hr wants air above the line as well as below it, and it may not ask for it
+ * with margin-top — that would collapse with the previous block's margin-bottom
+ * and desynchronise the measurement. So the air is INSIDE the box: the element
+ * is 1.4em tall and paints its own hairline down the middle. */
+.tf-prose hr {
+  border: 0;
+  height: 1.4em;
+  background: linear-gradient(
+    to bottom,
+    transparent calc(50% - 0.5px),
+    var(--tf-line) calc(50% - 0.5px),
+    var(--tf-line) calc(50% + 0.5px),
+    transparent calc(50% + 0.5px)
+  );
+}
+.tf-prose img { max-width: 100%; height: auto; }
+.tf-prose a { color: var(--tf-accent); }
+
+.tf-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  overflow: hidden;
+}
+.tf-prose th, .tf-prose td {
+  border: 1px solid var(--tf-line);
+  padding: 6px 8px;
+  vertical-align: top;
+  position: relative;
+}
+.tf-prose th { background: #f3f4f6; font-weight: 600; text-align: left; }
+
+.tf-prose .column-resize-handle {
+  position: absolute;
+  right: -2px; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--tf-accent);
+  pointer-events: none;
+}
+.tf-prose .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgb(47 111 219 / 0.14);
+  pointer-events: none;
+}
+
+/* A user-forced break. Zero height on purpose: the paginator budgets no space
+ * for it, so it must occupy none. Its visible marker is drawn outside the flow. */
+.tf-forced-break {
+  height: 0;
+  margin: 0 !important;
+  position: relative;
+}
+.tf-forced-break::after {
+  content: 'page break';
+  position: absolute;
+  left: 0; right: 0; top: -0.9em;
+  font: 500 9px/1 var(--tf-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tf-muted);
+  text-align: center;
+  border-top: 1px dashed var(--tf-line);
+  padding-top: 3px;
+}
+
+/* ------------------------------------------------------------------- bands */
+
+.tf-band {
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+.tf-fill { background: #fff; }
+.tf-gap {
+  background: var(--tf-desk);
+  box-shadow:
+    inset 0 3px 5px -3px rgb(0 0 0 / 0.35),
+    inset 0 -3px 5px -3px rgb(0 0 0 / 0.35);
+}
+.tf-run {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  font: 400 11px/1.2 var(--tf-sans);
+  color: var(--tf-muted);
+}
+.tf-run-left, .tf-run-center, .tf-run-right { flex: 1 1 0; white-space: nowrap; overflow: hidden; }
+.tf-run-center { text-align: center; }
+.tf-run-right { text-align: right; }
+
+/* ---------------------------------------------------------------- status */
+
+.tf-status {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 5px 14px;
+  font: 400 11px/1.4 var(--tf-sans);
+  color: light-dark(var(--tf-muted), #9aa0a6);
+  background: var(--tf-chrome);
+  border-top: 1px solid var(--tf-line);
+}
+.tf-dirty { margin-left: auto; }
+.tf-dirty.is-dirty { color: #b4690e; font-weight: 600; }
+
+.tf-dropcursor { border-left: 2px solid var(--tf-accent); }
+.ProseMirror-gapcursor:after { border-top: 2px solid var(--tf-ink); }
+
+/* -------------------------------------------------------------- printing */
+/*
+ * Print consumes the paginator's OWN break positions (.tf-break-before, set by
+ * a node decoration) rather than letting the print engine re-paginate from
+ * scratch. That is what makes a PDF agree with the screen instead of being a
+ * second opinion a line or two off.
+ *
+ * Known gap (docs/VISION.md): browsers do not render content in @page margin
+ * boxes, so on-screen running headers/footers are ours and printed ones are the
+ * browser's. Bands are hidden here; @page margins take over.
+ */
+/* NO @page RULE HERE ON PURPOSE. Descriptors in the page context cannot read
+ * custom properties, so a `size: var(…)` here is silently ignored and the
+ * document prints on whatever paper the system defaults to. The real rule is
+ * generated with literal millimetres by Writer.applyGeometry(). */
+
+@media print {
+  html, body { background: #fff; height: auto; }
+  .tf-bar, .tf-status, .tf-band { display: none !important; }
+  .tf-scroll { overflow: visible; padding: 0; }
+  .tf-column { width: auto; margin: 0; }
+  .tf-prose {
+    width: auto;
+    padding: 0;
+    box-shadow: none;
+  }
+  .tf-break-before { break-before: page; }
+  .tf-forced-break { break-after: page; }
+  .tf-forced-break::after { display: none; }
+  .tf-prose h1, .tf-prose h2, .tf-prose h3, .tf-prose h4 { break-after: avoid; }
+  .tf-prose tr, .tf-prose img, .tf-prose pre { break-inside: avoid; }
+}
+
+/* --------------------------------------------------------------- splash */
+
+#tf-splash {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--tf-desk);
+  font: 500 13px/1.4 var(--tf-sans);
+  color: light-dark(#5a6068, #b8bdc4);
+  z-index: 10;
+}
+#tf-splash.done { display: none; }
