@@ -15,6 +15,7 @@ export interface ChromeHost {
   copyJson(): void
   replaceJson(): void
   print(): void
+  toggleReview(): void
 }
 
 interface Btn {
@@ -70,12 +71,16 @@ const GROUPS: Btn[][] = [
   ],
   [
     { label: '▦', title: 'Insert 3×3 table', run: (w) => insertTable(3, 3)(w.view.state, w.view.dispatch) },
+    { label: 'M', title: 'Insert or edit a Mermaid diagram', run: (w) => w.editMermaid() },
     { label: '―', title: 'Horizontal rule', run: (w) => commands.rule(w.view.state, w.view.dispatch) },
     { label: '⤓', title: 'Page break (⌘⏎)', run: (w) => commands.pageBreak(w.view.state, w.view.dispatch) },
   ],
 ]
 
-export function buildChrome(writer: Writer, host: ChromeHost): { root: HTMLElement; setPages(n: number): void; setDirty(d: boolean): void } {
+export function buildChrome(
+  writer: Writer,
+  host: ChromeHost,
+): { root: HTMLElement; setPages(n: number): void; setDirty(d: boolean): void; setReviewOpen(open: boolean): void } {
   const root = document.createElement('div')
   root.id = 'tf-app'
   root.setAttribute('data-tf-transient', '')
@@ -200,16 +205,28 @@ export function buildChrome(writer: Writer, host: ChromeHost): { root: HTMLEleme
     b.addEventListener('click', fn)
     fileGroup.appendChild(b)
   }
+  const reviewBtn = document.createElement('button')
+  reviewBtn.className = 'tf-btn tf-btn-text'
+  reviewBtn.textContent = 'Review'
+  reviewBtn.title = 'Comments and suggestions'
+  reviewBtn.addEventListener('click', () => host.toggleReview())
+  fileGroup.appendChild(reviewBtn)
+
   bar.appendChild(fileGroup)
   root.appendChild(bar)
 
   // --- page surface ----------------------------------------------------------
+  // A flex row, so the review rail can be a sibling of the scroller rather than
+  // an overlay positioned against a top bar whose height changes when it wraps.
+  const main = document.createElement('div')
+  main.className = 'tf-main'
   const scroll = document.createElement('div')
   scroll.className = 'tf-scroll'
   const column = document.createElement('div')
   column.className = 'tf-column'
   scroll.appendChild(column)
-  root.appendChild(scroll)
+  main.appendChild(scroll)
+  root.appendChild(main)
 
   // --- status bar ------------------------------------------------------------
   const status = document.createElement('div')
@@ -239,8 +256,12 @@ export function buildChrome(writer: Writer, host: ChromeHost): { root: HTMLEleme
       dirtyEl.classList.toggle('is-dirty', d)
       sync()
     },
+    setReviewOpen: (open: boolean) => reviewBtn.classList.toggle('is-active', open),
   }
 }
 
 /** Where the editor mounts, once the chrome exists. */
 export const columnOf = (root: HTMLElement): HTMLElement => root.querySelector('.tf-column') as HTMLElement
+
+/** The row that holds the page scroller — and, beside it, the review rail. */
+export const mainOf = (root: HTMLElement): HTMLElement => root.querySelector('.tf-main') as HTMLElement

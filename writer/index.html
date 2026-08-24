@@ -16,13 +16,16 @@
         id "tiffin-doc", below — plain readable JSON. Edit THAT block in place;
         never regenerate the whole file. Escape every "<" as <.
       · `body` is a ProseMirror document tree. `pageSetup` is page geometry.
+      · A Mermaid diagram is {"type":"mermaid_diagram","attrs":{"source":"..."}}.
+        Store only Mermaid source. The local runtime derives the SVG.
       · Do NOT write page breaks for pagination. Automatic breaks are computed
         on open and exist only as view decorations. The single break node,
         {"type":"page_break"}, means "the author demanded a break here".
       · The base64 blocks at the end are the DEFLATE-compressed app runtime —
         no user content. Leave them alone.
       · In a running file, window.tiffin exposes { doc, serialize(), loadDoc(),
-        save(), renderStatic() }. In the UI: Copy JSON / Paste JSON.
+        save(), renderStatic(), renderStaticAsync() }. Use the async form when
+        static output must contain rendered Mermaid SVG.
     -->
     <script type="application/tiffin+json" id="tiffin-doc"></script>
   </head>

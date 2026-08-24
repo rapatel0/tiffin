@@ -6,9 +6,20 @@ import 'prosemirror-gapcursor/style/gapcursor.css'
 import './styles.css'
 
 import { capturePristine, canWriteInPlace, currentFileName, readEmbeddedDoc, saveFile, serialize } from './save.ts'
-import { defaultPageSetup, docContentKey, newDocId, parseDoc, FORMAT, VERSION, type TiffinDoc } from './model.ts'
+import {
+  defaultPageSetup,
+  docContentKey,
+  newAnnotationId,
+  newDocId,
+  parseDoc,
+  FORMAT,
+  VERSION,
+  type TiffinDoc,
+} from './model.ts'
 import { Writer } from './editor.ts'
-import { buildChrome, columnOf } from './toolbar.ts'
+import { buildChrome, columnOf, mainOf } from './toolbar.ts'
+import { buildPanel } from './panel.ts'
+import { mergeReview, pickColor, purgeReview, type Author } from './review.ts'
 import starter from './starter.json'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -61,6 +72,7 @@ const writer = new Writer(document.createElement('div'), doc, {
     setDirty(key !== savedKey)
   },
   onPages: (pages) => chrome.setPages(pages),
+  onReview: () => panel.render(),
 })
 
 const chrome = buildChrome(writer, {
@@ -69,6 +81,53 @@ const chrome = buildChrome(writer, {
   print: () => window.print(),
   copyJson: () => void copyJson(),
   replaceJson: () => void replaceJson(),
+  toggleReview: () => chrome.setReviewOpen(panel.toggle()),
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Identity. There is no server to authenticate against, so a reviewer is a name
+// they chose, remembered per-document. A claim, not a credential — the format
+// says so out loud rather than implying otherwise with an avatar.
+// ─────────────────────────────────────────────────────────────────────────────
+const IDENTITY_KEY = `tiffin:me:${doc.docId}`
+
+function author(): Author {
+  let raw = ''
+  try {
+    raw = localStorage.getItem(IDENTITY_KEY) ?? ''
+  } catch {
+    /* private mode, or a file:// origin with storage disabled */
+  }
+  if (raw) {
+    try {
+      return JSON.parse(raw) as Author
+    } catch {
+      /* fall through and mint a new one */
+    }
+  }
+  const name = window.prompt('Your name, for comments on this document:')?.trim() || 'Anonymous'
+  const me: Author = {
+    id: newAnnotationId('p'),
+    person: { name, color: pickColor(writer.review.people) },
+  }
+  try {
+    localStorage.setItem(IDENTITY_KEY, JSON.stringify(me))
+  } catch {
+    /* not fatal: the name just will not persist to the next open */
+  }
+  return me
+}
+
+const panel = buildPanel(writer, {
+  author,
+  importReview: () => void importReview(),
+  purge: () => {
+    const { review, removed } = purgeReview(writer.review)
+    if (!removed) return note('Nothing to purge — no resolved comments or settled suggestions.')
+    writer.setReviewData(review)
+    note(`Purged ${removed} settled item${removed === 1 ? '' : 's'}.`)
+  },
+  note: (text, isError) => note(text, isError),
 })
 
 document.body.appendChild(chrome.root)
@@ -76,6 +135,7 @@ document.body.appendChild(chrome.root)
 // the view against a detached node first keeps the paginator from measuring a
 // layout that has no width.
 columnOf(chrome.root).appendChild(writer.view.dom)
+mainOf(chrome.root).appendChild(panel.root)
 
 writer.applyGeometry()
 document.title = `${writer.title} — Tiffin`
@@ -121,6 +181,67 @@ async function copyJson(): Promise<void> {
     ta.select()
     note('Clipboard blocked — the JSON is selected in the box; copy it manually.')
     ta.addEventListener('blur', () => ta.remove())
+  }
+}
+
+/**
+ * Merge another copy's review into this one.
+ *
+ * The whole async-review design rests on one precondition: both copies describe
+ * the same prose. `baseRev` is how that gets checked, and a mismatch is refused
+ * loudly rather than merged optimistically — positions from a different body
+ * point at text that is not there, and the result would be annotations quietly
+ * attached to the wrong sentences.
+ */
+async function importReview(): Promise<void> {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.html,.tiffin.html,text/html'
+  input.setAttribute('data-tf-transient', '')
+  const picked = new Promise<File | null>((resolve) => {
+    input.addEventListener('change', () => resolve(input.files?.[0] ?? null), { once: true })
+    input.addEventListener('cancel', () => resolve(null), { once: true })
+  })
+  input.click()
+  const file = await picked
+  if (!file) return
+
+  try {
+    const html = await file.text()
+    const block = new DOMParser().parseFromString(html, 'text/html').getElementById('tiffin-doc')
+    if (!block?.textContent) throw new Error('no Tiffin document block in that file')
+    const theirs = parseDoc(block.textContent)
+
+    const incoming = theirs.review
+      ? Object.keys(theirs.review.comments).length + Object.keys(theirs.review.suggestions).length
+      : 0
+    if (!theirs.review || !incoming) {
+      return note(`${file.name} has no comments or suggestions to import.`)
+    }
+    if (theirs.docId !== writer.snapshot().docId) {
+      return note(`${file.name} is a different document, not a copy of this one.`, true)
+    }
+    const mineRev = writer.currentRev()
+    if (theirs.review.baseRev !== mineRev) {
+      return note(
+        `${file.name} was edited, not just annotated — its positions describe different prose, ` +
+          `so it cannot be merged automatically.`,
+        true,
+      )
+    }
+
+    const { review, report } = mergeReview(writer.review, theirs.review)
+    const added = report.comments + report.suggestions
+    writer.setReviewData(review)
+    panel.render()
+    note(
+      added
+        ? `Merged ${report.comments} comment${report.comments === 1 ? '' : 's'} and ` +
+            `${report.suggestions} suggestion${report.suggestions === 1 ? '' : 's'} from ${file.name}.`
+        : `Nothing new in ${file.name} — you already have all of it.`,
+    )
+  } catch (err) {
+    note(`Could not import: ${(err as Error).message}`, true)
   }
 }
 
@@ -189,6 +310,11 @@ declare global {
       loadDoc(json: string | TiffinDoc): void
       save(): Promise<void>
       renderStatic(): HTMLElement
+      renderStaticAsync(): Promise<HTMLElement>
+      /** Comments and suggestions, with anchors as of right now. */
+      readonly review: TiffinDoc['review']
+      /** Hash of the current prose — the merge precondition. */
+      baseRev(): string
     }
   }
 }
@@ -211,6 +337,11 @@ window.tiffin = {
   },
   save: () => doSave(false),
   renderStatic: () => writer.renderStatic(),
+  renderStaticAsync: () => writer.renderStaticAsync(),
+  get review() {
+    return writer.snapshot().review
+  },
+  baseRev: () => writer.currentRev(),
 }
 
 // Keep the default page setup reachable for tooling that builds a doc from

@@ -45,8 +45,11 @@ if (html.includes('id="tf-rt-js"')) {
 const mod = html.match(/<script type="module"[^>]*>([\s\S]*?)<\/script>/)
 if (!mod) throw new Error('inline module script not found — was SINGLEFILE=1 set?')
 
-const headEnd = html.indexOf('</head>')
-const styleM = html.slice(0, headEnd).match(/<style[^>]*>([\s\S]*?)<\/style>/)
+// Runtime code can contain literal HTML tag text. Use the real final head close
+// and the final style element, which Vite writes after the module script.
+const headEnd = html.lastIndexOf('</head>')
+const styles = Array.from(html.slice(0, headEnd).matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g))
+const styleM = styles.at(-1)
 if (!styleM) throw new Error('app stylesheet not found in head')
 
 const b64 = (s) => deflateRawSync(Buffer.from(s, 'utf8'), { level: 9 }).toString('base64')

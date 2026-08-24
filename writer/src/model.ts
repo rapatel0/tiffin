@@ -67,6 +67,58 @@ export interface PageSetup {
   gap: number
 }
 
+/**
+ * A reviewer. Self-asserted: there is no server to authenticate against, so a
+ * name is a claim, not a credential. See docs/SPRINT-002.md.
+ */
+export interface Person {
+  name: string
+  color: string
+}
+
+/** Fields shared by everything anchored to a range of the prose. */
+interface Anchored {
+  author: string
+  created: string
+  /** Positions into the body. Authored intent, mapped live — never derived. */
+  from: number
+  to: number
+  /** The text as it read when the annotation was made. The integrity check. */
+  quote: string
+}
+
+export interface Comment extends Anchored {
+  /** Id of the comment this replies to, or null for a thread root. */
+  threadOf: string | null
+  resolved: boolean
+  body: string
+}
+
+export type SuggestionKind = 'replace' | 'insert' | 'delete'
+export type SuggestionStatus = 'open' | 'accepted' | 'rejected'
+
+export interface Suggestion extends Anchored {
+  kind: SuggestionKind
+  /** Proposed replacement text. Empty for a deletion. */
+  text: string
+  status: SuggestionStatus
+}
+
+/**
+ * Review state. Lives beside the body rather than as marks inside it, so that
+ * every copy circulated for review keeps a byte-identical `body` and merging
+ * two returned copies is a union of keyed maps. See docs/SPRINT-002.md.
+ */
+export interface Review {
+  /** `reviewing` freezes the prose by convention; `editing` is the owner. */
+  mode: 'editing' | 'reviewing'
+  /** Hash of the clean body at the moment review started. Merge precondition. */
+  baseRev: string
+  people: Record<string, Person>
+  comments: Record<string, Comment>
+  suggestions: Record<string, Suggestion>
+}
+
 export interface TiffinDoc {
   format: typeof FORMAT
   version: number
@@ -80,6 +132,39 @@ export interface TiffinDoc {
   modified: string
   /** Shared blobs (data: URIs), referenced from the body as `asset:<key>`. */
   assets?: Record<string, string>
+  /** Comments and suggestions. Absent until someone annotates. */
+  review?: Review
+}
+
+export function emptyReview(baseRev = ''): Review {
+  return { mode: 'editing', baseRev, people: {}, comments: {}, suggestions: {} }
+}
+
+/**
+ * FNV-1a over the serialized body — a change detector, not a signature.
+ *
+ * Deliberately not `crypto.subtle`: it is async, and it needs a secure context
+ * that `file://` does not reliably provide — the same constraint that shapes
+ * newDocId(). An adversary who wants two different bodies to agree here can
+ * have that; what matters is that an *accidental* divergence is caught before
+ * two sets of positions get merged into a document neither describes.
+ */
+export function bodyRev(body: unknown): string {
+  const s = JSON.stringify(body ?? null)
+  let h = 0x811c9dc5
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i)
+    // h *= 16777619, kept in 32-bit range without BigInt or overflow to double.
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0
+  }
+  return `fnv1a:${h.toString(16).padStart(8, '0')}:${s.length.toString(16)}`
+}
+
+/** Short, collision-resistant-enough id for an annotation. */
+export function newAnnotationId(prefix: string): string {
+  const b = new Uint8Array(8)
+  globalThis.crypto.getRandomValues(b)
+  return `${prefix}_${Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('')}`
 }
 
 export function defaultPageSetup(): PageSetup {
@@ -176,6 +261,35 @@ export function parseDoc(raw: string): TiffinDoc {
     pageSetup: setup,
     body: d.body ?? null,
     modified: typeof d.modified === 'string' ? d.modified : new Date().toISOString(),
+    review: normalizeReview(d.review, d.body),
+  }
+}
+
+/**
+ * Same posture as the rest of parseDoc: lenient about missing, strict about
+ * malformed. A review block that is the wrong shape is dropped rather than
+ * allowed to throw — losing annotations is bad, but refusing to open the
+ * document they are attached to is worse.
+ */
+function normalizeReview(raw: unknown, body: unknown): Review | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const r = raw as Partial<Review>
+  const map = <T>(src: unknown, keep: (v: Record<string, unknown>) => boolean): Record<string, T> => {
+    const out: Record<string, T> = {}
+    if (src && typeof src === 'object') {
+      for (const [k, v] of Object.entries(src as Record<string, unknown>)) {
+        if (v && typeof v === 'object' && keep(v as Record<string, unknown>)) out[k] = v as T
+      }
+    }
+    return out
+  }
+  const ranged = (v: Record<string, unknown>) => typeof v.from === 'number' && typeof v.to === 'number'
+  return {
+    mode: r.mode === 'reviewing' ? 'reviewing' : 'editing',
+    baseRev: typeof r.baseRev === 'string' && r.baseRev ? r.baseRev : bodyRev(body),
+    people: map<Person>(r.people, (v) => typeof v.name === 'string'),
+    comments: map<Comment>(r.comments, ranged),
+    suggestions: map<Suggestion>(r.suggestions, ranged),
   }
 }
 
@@ -184,5 +298,5 @@ export function parseDoc(raw: string): TiffinDoc {
  * which churns on every save without anyone having typed anything.
  */
 export function docContentKey(doc: TiffinDoc): string {
-  return JSON.stringify([doc.title, doc.pageSetup, doc.body, doc.assets ?? null])
+  return JSON.stringify([doc.title, doc.pageSetup, doc.body, doc.assets ?? null, doc.review ?? null])
 }
