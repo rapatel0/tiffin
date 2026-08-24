@@ -71,6 +71,7 @@ const GROUPS: Btn[][] = [
   ],
   [
     { label: '▦', title: 'Insert 3×3 table', run: (w) => insertTable(3, 3)(w.view.state, w.view.dispatch) },
+    { label: 'M', title: 'Insert or edit a Mermaid diagram', run: (w) => w.editMermaid() },
     { label: '―', title: 'Horizontal rule', run: (w) => commands.rule(w.view.state, w.view.dispatch) },
     { label: '⤓', title: 'Page break (⌘⏎)', run: (w) => commands.pageBreak(w.view.state, w.view.dispatch) },
   ],

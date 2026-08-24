@@ -31,7 +31,8 @@ checks). A gate failure is a build failure.
 | File | Role |
 |---|---|
 | `writer/src/model.ts` | the `tiffin/doc` JSON model — envelope, `pageSetup`, parse/normalize |
-| `writer/src/schema.ts` | the ProseMirror schema, which is also the renderer |
+| `writer/src/schema.ts` | the ProseMirror schema and stored Mermaid source |
+| `writer/src/mermaid.ts` | local Mermaid rendering for the editor and static output |
 | `writer/src/paginate.ts` | measures blocks, computes page breaks, draws them as decorations |
 | `writer/src/save.ts` | pristine-clone-and-splice self-save, FSA + download |
 | `writer/src/editor.ts` | state, plugins, keymaps, command surface, `@page` generation |
@@ -63,9 +64,13 @@ it at dev time instead of trusting the comment.
 The document is plain JSON in a `<script type="application/tiffin+json"
 id="tiffin-doc">` block near the top of the file. Edit that block in place;
 escape every `<` as `<`. Do not write page breaks for pagination — only
-`{"type":"page_break"}` for a break the author demanded. In a running file,
-`window.tiffin` exposes `{ doc, serialize(), serializeFile(), loadDoc(), save(),
-renderStatic() }`.
+`{"type":"page_break"}` for a break the author demanded. Store a Mermaid diagram
+as `{"type":"mermaid_diagram","attrs":{"source":"flowchart LR\\n  A --> B"}}`.
+Tiffin stores only the source and renders the SVG locally.
+
+In a running file, `window.tiffin` exposes `{ doc, serialize(), serializeFile(),
+loadDoc(), save(), renderStatic(), renderStaticAsync() }`. Use
+`renderStaticAsync()` when the result must include rendered Mermaid SVG.
 
 Claude Code users get a packaged `tiffin-docs` skill: it bundles the runtime
 shell, ships templated documents, and splices the JSON without disturbing the

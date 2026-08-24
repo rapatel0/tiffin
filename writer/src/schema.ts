@@ -3,12 +3,16 @@
 //
 // Every node's toDOM is used by THREE surfaces: the live editor view, the
 // static save-time preview (via DOMSerializer), and print. That is the property
-// we chose ProseMirror for, and it holds only as long as we avoid nodeViews
-// whose live rendering diverges from toDOM.
+// we chose ProseMirror for. Mermaid is the one derived view: its node stores
+// source, toDOM preserves that source, and mermaid.ts derives the same SVG for
+// editor and static output.
 //
-// ONE structural addition to the standard set: `pageBreak`. It is the only page
-// break that belongs in the document, because it is the only one the user
-// asked for. Automatic breaks are decorations (see paginate.ts).
+// Two structural additions to the standard set:
+//
+// - `page_break` stores a page break that the author requested.
+// - `mermaid_diagram` stores Mermaid source as data. The runtime derives SVG.
+//
+// Automatic page breaks and rendered SVG never enter the document JSON.
 
 import { Schema, type MarkSpec, type NodeSpec } from 'prosemirror-model'
 import { schema as basic } from 'prosemirror-schema-basic'
@@ -21,6 +25,28 @@ const pageBreak: NodeSpec = {
   selectable: true,
   parseDOM: [{ tag: 'div[data-page-break]' }],
   toDOM: () => ['div', { 'data-page-break': 'true', class: 'tf-forced-break' }],
+}
+
+const mermaidDiagram: NodeSpec = {
+  group: 'block',
+  atom: true,
+  selectable: true,
+  attrs: {
+    source: { default: 'flowchart LR\n  A --> B', validate: 'string' },
+  },
+  parseDOM: [
+    {
+      tag: 'figure[data-mermaid-diagram]',
+      getAttrs: (dom) => ({
+        source: (dom as HTMLElement).querySelector('.tf-mermaid-source')?.textContent ?? '',
+      }),
+    },
+  ],
+  toDOM: (node) => [
+    'figure',
+    { 'data-mermaid-diagram': 'true', class: 'tf-mermaid' },
+    ['pre', { class: 'tf-mermaid-source' }, String(node.attrs.source)],
+  ],
 }
 
 const underline: MarkSpec = {
@@ -50,6 +76,7 @@ const tables = tableNodes({
 export const schema = new Schema({
   nodes: addListNodes(basic.spec.nodes, 'paragraph block*', 'block')
     .append({ page_break: pageBreak })
+    .append({ mermaid_diagram: mermaidDiagram })
     .append(tables),
   marks: basic.spec.marks.append({ underline, strike }),
 })

@@ -310,6 +310,7 @@ declare global {
       loadDoc(json: string | TiffinDoc): void
       save(): Promise<void>
       renderStatic(): HTMLElement
+      renderStaticAsync(): Promise<HTMLElement>
       /** Comments and suggestions, with anchors as of right now. */
       readonly review: TiffinDoc['review']
       /** Hash of the current prose — the merge precondition. */
@@ -336,6 +337,7 @@ window.tiffin = {
   },
   save: () => doSave(false),
   renderStatic: () => writer.renderStatic(),
+  renderStaticAsync: () => writer.renderStaticAsync(),
   get review() {
     return writer.snapshot().review
   },

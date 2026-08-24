@@ -211,6 +211,23 @@ html, body {
 .tf-prose pre code { background: none; padding: 0; }
 .tf-prose ul, .tf-prose ol { padding-left: 1.6em; }
 
+.tf-mermaid {
+  min-height: 72px;
+  overflow: hidden;
+  border: 1px solid var(--tf-line);
+  border-radius: 7px;
+  background: #fff;
+  padding: 12px;
+}
+.tf-mermaid-render { overflow: auto; }
+.tf-mermaid-render svg { display: block; width: 100%; max-width: 100%; height: auto; margin: 0 auto; }
+.tf-mermaid-source { display: block; }
+.tf-mermaid-error { display: none; color: #8c1d18; font: 600 12px/1.4 var(--tf-sans); }
+.tf-mermaid.is-rendering { opacity: 0.65; }
+.tf-mermaid.is-rendered .tf-mermaid-source { display: none; }
+.tf-mermaid.has-error .tf-mermaid-error { display: block; }
+.tf-mermaid.ProseMirror-selectednode { outline: 2px solid var(--tf-accent); outline-offset: 2px; }
+
 
 /* An hr wants air above the line as well as below it, and it may not ask for it
  * with margin-top — that would collapse with the previous block's margin-bottom
@@ -467,7 +484,7 @@ html, body {
   .tf-forced-break { break-after: page; }
   .tf-forced-break::after { display: none; }
   .tf-prose h1, .tf-prose h2, .tf-prose h3, .tf-prose h4 { break-after: avoid; }
-  .tf-prose tr, .tf-prose img, .tf-prose pre { break-inside: avoid; }
+  .tf-prose tr, .tf-prose img, .tf-prose pre, .tf-mermaid { break-inside: avoid; }
 }
 
 /* --------------------------------------------------------------- splash */

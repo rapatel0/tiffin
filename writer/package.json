@@ -9,9 +9,10 @@
     "build": "tsc -b && vite build",
     "build:single": "tsc -b && SINGLEFILE=1 vite build --outDir dist-single && mv dist-single/index.html dist-single/Tiffin_Writer.tiffin.html && node ../scripts/postbuild-compress.mjs dist-single/Tiffin_Writer.tiffin.html && node ../scripts/shell-gate.mjs dist-single/Tiffin_Writer.tiffin.html",
     "gate": "node ../scripts/shell-gate.mjs dist-single/Tiffin_Writer.tiffin.html",
-    "test": "esbuild test/review.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/tf-test.mjs --log-level=error && node node_modules/.cache/tf-test.mjs"
+    "test": "esbuild test/review.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/tf-review-test.mjs --log-level=error && esbuild test/mermaid.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/tf-mermaid-test.mjs --log-level=error && node node_modules/.cache/tf-review-test.mjs && node node_modules/.cache/tf-mermaid-test.mjs"
   },
   "dependencies": {
+    "mermaid": "11.17.1",
     "prosemirror-commands": "^1.7.1",
     "prosemirror-dropcursor": "^1.8.2",
     "prosemirror-gapcursor": "^1.3.2",

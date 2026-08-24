@@ -19,6 +19,7 @@ must still be true on someone else's machine in ten years.
    `<script type="application/tiffin+json" id="tiffin-doc">` block. Readable in
    View Source, editable by any agent with filesystem access. The compressed
    base64 payload below it is *runtime only* and contains no user content.
+   Mermaid nodes store source text. The local runtime derives their SVG.
 3. **Pagination is derived, never stored.** Automatic page breaks are computed
    from measured layout at open time and live in the view layer as decorations.
    Only a break the *user* forced is a node in the document. A file that stored
@@ -42,10 +43,9 @@ on-disk cost is deflated × 1.33 for base64):
 | Paged.js | 100 KB | ~133 KB | MIT | a one-way chunker — cannot be typed into |
 | SuperDoc | 2.1 MB | ~2.8 MB | AGPL-3.0 | real DOCX fidelity; ends the one-file story |
 
-ProseMirror is WYSIWYG by construction: the schema's `toDOM` renders the
-document, `contenteditable` sits on top, and the *same* serializer produces the
-saved thumbnail and the print output. One renderer, three surfaces — the
-property bento needed 376 lines of `preview.ts` to get.
+ProseMirror is WYSIWYG by construction. Its schema renders ordinary document
+nodes. The Mermaid node view derives SVG from stored source for editor, static,
+and print output. The SVG never enters document JSON.
 
 The paginator is ~250 lines and it is the core of the product, so we own it
 outright rather than inherit someone's roadmap.

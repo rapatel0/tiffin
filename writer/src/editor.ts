@@ -2,7 +2,7 @@
 // The editor: ProseMirror state, plugins, keymaps, and the command surface the
 // toolbar drives. Nothing here knows about files or UI chrome.
 
-import { EditorState, type Command, type Transaction } from 'prosemirror-state'
+import { EditorState, NodeSelection, type Command, type Transaction } from 'prosemirror-state'
 import { EditorView } from 'prosemirror-view'
 import { Node as PMNode, DOMSerializer } from 'prosemirror-model'
 import { baseKeymap, chainCommands, setBlockType, toggleMark } from 'prosemirror-commands'
@@ -22,7 +22,8 @@ import { dropCursor } from 'prosemirror-dropcursor'
 import { gapCursor } from 'prosemirror-gapcursor'
 
 import { schema } from './schema.ts'
-import { paginationPlugin } from './paginate.ts'
+import { invalidatePagination, paginationPlugin } from './paginate.ts'
+import { MermaidNodeView, renderStaticMermaid } from './mermaid.ts'
 import { bodyRev, defaultPageSetup, emptyReview, pageBox, type PageSetup, type Review, type TiffinDoc } from './model.ts'
 import { getReview, REVIEW_META, reviewPlugin, setReview } from './review.ts'
 
@@ -182,6 +183,10 @@ export class Writer {
     this.view = new EditorView(mount, {
       state,
       attributes: { class: 'tf-prose', spellcheck: 'true' },
+      nodeViews: {
+        mermaid_diagram: (node, view, getPos) =>
+          new MermaidNodeView(node, view, getPos, invalidatePagination, () => this.editMermaid()),
+      },
       dispatchTransaction: (tr) => {
         const before = getReview(this.view.state).review
         this.view.updateState(this.view.state.apply(tr))
@@ -321,6 +326,20 @@ export class Writer {
     document.title = `${this.envelope.title} — Tiffin`
   }
 
+  /** Insert a Mermaid diagram, or edit the selected Mermaid diagram. */
+  editMermaid(): void {
+    const selection = this.view.state.selection
+    const selected = selection instanceof NodeSelection && selection.node.type === nodes.mermaid_diagram
+    const current = selected ? String(selection.node.attrs.source) : 'flowchart LR\n  A --> B'
+    const source = window.prompt('Mermaid diagram source:', current)
+    if (source === null || !source.trim()) return
+
+    const tr = selected
+      ? this.view.state.tr.setNodeMarkup(selection.from, nodes.mermaid_diagram, { source })
+      : this.view.state.tr.replaceSelectionWith(nodes.mermaid_diagram.create({ source }))
+    this.view.dispatch(tr.scrollIntoView())
+  }
+
   /**
    * A static, script-free rendering of the document — the same schema→DOM
    * mapping the editor uses, so a thumbnail can never disagree with the page.
@@ -329,6 +348,13 @@ export class Writer {
     const host = document.createElement('div')
     host.className = 'tf-static'
     host.appendChild(DOMSerializer.fromSchema(schema).serializeFragment(this.view.state.doc.content))
+    return host
+  }
+
+  /** Return a static rendering after all Mermaid diagrams finish. */
+  async renderStaticAsync(): Promise<HTMLElement> {
+    const host = this.renderStatic()
+    await renderStaticMermaid(host)
     return host
   }
 
